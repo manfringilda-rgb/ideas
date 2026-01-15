@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mood Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root{ --text:#111; }
+    *{ box-sizing: border-box }
+    html, body { height: 100% }
+    body{
+      font-family: "Akzidenz Grotesk", "Helvetica Neue", Helvetica, Arial, system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-weight: 400;
+      display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+      min-height:100vh; margin:0; background:#111; color:#fff;
+      transition: background 600ms ease, color 300ms ease;
+      padding:28px;
+    }
+    header{
+      width:100%; max-width:1024px; margin:12px 0 8px;
+      color:inherit; position:relative;
+    }
+    .topbar{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+    }
+    .site-title{ font-size:22px; margin:0 0 2px 0; letter-spacing:.3px; font-weight:400; }
+    .meta{ margin:0; line-height:1.25; }
+    .meta small{ display:block; font-size:13px; opacity:.9 }
+    a.method-link{ font-size:13px; text-decoration: underline; color:inherit; opacity:.9; white-space:nowrap; }
+    a.method-link:hover{ opacity:1; }
+    .stage{ display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:16vh; width:100%; }
+    .word-adj{
+      font-family: "Libre Baskerville", Baskerville, "Baskerville Old Face", "Times New Roman", Georgia, serif;
+      font-style: italic;
+      font-weight:400;
+      font-size: clamp(52px, 10.5vw, 150px);
+      line-height:1.03; margin:0; text-align:center; letter-spacing:.5px;
+    }
+    .word-noun{
+      font-family: "Akzidenz Grotesk", "Helvetica Neue", Helvetica, Arial, system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-weight:400;
+      font-size: clamp(48px, 9.5vw, 130px);
+      line-height:1.03; margin:0; text-align:center; letter-spacing:.2px;
+    }
+    .fade{ opacity: 0; }
+    .fade.show{ opacity: 1; transition: opacity .3s ease; }
+    .controls{ display:flex; align-items:center; gap:14px; margin-top:22px; flex-wrap:wrap; justify-content:center; }
+    .primary{
+      appearance:none; background:transparent; color:inherit; font-size:20px; padding:12px 28px;
+      border-radius:12px; border:1.5px solid currentColor; cursor:pointer; font-weight:400; letter-spacing:.2px;
+    }
+    .primary:hover{ background: currentColor; color: #000; }
+    .below-note{ margin-top:16px; max-width:840px; text-align:center; font-size:13px; line-height:1.45; opacity:.95 }
+    .sound-toggle-fixed{
+      position: fixed; right: 16px; bottom: 16px;
+      display:flex; align-items:center; gap:8px;
+      background: rgba(255,255,255,.25);
+      color:#111;
+      padding:10px 12px; border-radius:12px; font-size:14px;
+      border:1px solid rgba(255,255,255,.45); backdrop-filter: blur(3px); user-select: none;
+    }
+    .sound-toggle-fixed input{ width:18px; height:18px; }
+    footer{ margin-top:auto; font-size:12px; opacity:.9; text-align:center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div>
+        <h1 class="site-title">Mood Generator</h1>
+        <p class="meta">
+          <small>Methodology of Visual Communication Course</small>
+          <small>Created for NABA by Gilda Manfrin</small>
+        </p>
+      </div>
+      <div>
+        <a class="method-link" href="./mood-generator_METHOD_EN_v2.html" target="_blank" rel="noopener">Methodology</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="stage" aria-live="polite">
+    <h2 class="word-adj fade" id="word1">—</h2>
+    <h2 class="word-noun fade" id="word2">—</h2>
+
+    <div class="controls">
+      <button id="gen-btn" class="primary" aria-label="Generate a new research mood">Generate</button>
+    </div>
+
+    <p class="below-note">
+      This tool randomly combines adjectives and nouns drawn from a cultural vocabulary developed through a qualitative mapping of art, design, and fashion publications supported by AI, to help students new to contemporary culture synthesize and update trends more effectively. Each word has an assigned color and sound; the generated background and sound are chords created by their sum.
+    </p>
+  </section>
+
+  <label class="sound-toggle-fixed" title="Toggle sound on generation">
+    <input type="checkbox" id="sound-toggle" checked />
+    Sound on
+  </label>
+
+  <footer>© 2025 — Educational use only</footer>
+
+  <script>
+    // Utils
+    function hexToRgb(hex){ const n=parseInt(hex.replace('#',''),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+    function mixHex(c1,c2){ const [r1,g1,b1]=hexToRgb(c1), [r2,g2,b2]=hexToRgb(c2); return '#'+[r1+r2>>1,g1+g2>>1,b1+b2>>1].map(v=>('0'+v.toString(16)).slice(-2)).join(''); }
+    function setSolid(hex){ document.body.style.background = hex; }
+    function setContrast(hex){
+      const [r,g,b]=hexToRgb(hex); const y=(r*299+g*587+b*114)/1000; const light=y<160; const color= light?'#fff':'#111';
+      document.querySelectorAll('header, .word-adj, .word-noun, footer, .meta small, .method-link, .below-note').forEach(el=> el.style.color=color);
+      const btn = document.querySelector('.primary'); btn.style.color = color; btn.style.borderColor = color;
+      const toggle = document.querySelector('.sound-toggle-fixed');
+      toggle.style.color = light ? '#fff' : '#111';
+      toggle.style.borderColor = light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.25)';
+      toggle.style.background = light ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.28)';
+    }
+
+    // Vocabularies (EN) — adjective first, then noun
+    const adjectiveProfile = {
+      "porous":         { color:"#7AE7C7", wave:"triangle", mode:"major6", pattern:"duet",    bend:false },
+      "interdependent": { color:"#218C8D", wave:"sine",     mode:"add9",   pattern:"pad",     bend:false },
+      "regenerative":   { color:"#C6E2B3", wave:"sine",     mode:"pentMaj",pattern:"slow",    bend:false },
+      "situated":       { color:"#6B8F71", wave:"sine",     mode:"minor",  pattern:"slow",    bend:false },
+      "collective":     { color:"#1F4D3A", wave:"triangle", mode:"major6", pattern:"regular", bend:false },
+      "tactile":        { color:"#B8DDE1", wave:"sawtooth", mode:"add9",   pattern:"pad",     bend:false },
+      "intimate":       { color:"#E8B4B8", wave:"sine",     mode:"minor",  pattern:"sustain", bend:false },
+      "silent":         { color:"#C4B6C7", wave:"sine",     mode:"quartal",pattern:"slow",    bend:false },
+      "slow":           { color:"#E6DDC6", wave:"sine",     mode:"pentMaj",pattern:"slow",    bend:false },
+      "soft":           { color:"#C9B6E4", wave:"triangle", mode:"major6", pattern:"duet",    bend:false },
+      "opaque":         { color:"#2F3A4F", wave:"square",   mode:"outside",pattern:"jitter",  bend:true  },
+      "ironic":         { color:"#2B2B2B", wave:"square",   mode:"tritone",pattern:"stab",    bend:true  },
+      "hypothetical":   { color:"#2F5BFF", wave:"sine",     mode:"add9",   pattern:"regular", bend:false },
+      "dissonant":      { color:"#C2185B", wave:"square",   mode:"outside",pattern:"stab",    bend:true  },
+      "post-theoretical":{color:"#0F172A", wave:"sine",     mode:"quartal",pattern:"regular", bend:false },
+      "confident":      { color:"#F5F2EA", wave:"triangle", mode:"major",  pattern:"arp",     bend:false },
+      "sensual":        { color:"#FF5A5F", wave:"sawtooth", mode:"major6", pattern:"duet",    bend:false },
+      "ritual":         { color:"#B7B2A9", wave:"sine",     mode:"minor",  pattern:"sustain", bend:false },
+      "hybrid":         { color:"#00BCD4", wave:"triangle", mode:"major6", pattern:"duet",    bend:false },
+      "minimal":        { color:"#FFFFFF", wave:"sine",     mode:"quartal",pattern:"regular", bend:false }
+    };
+    const nounProfile = {
+      "matter":        { color:"#0277BD", gesture:"drone",     detune:0 },
+      "surface":       { color:"#004D40", gesture:"drone",     detune:0 },
+      "gesture":       { color:"#4527A0", gesture:"drone",     detune:0 },
+      "structure":     { color:"#1A237E", gesture:"drone",     detune:0 },
+      "object":        { color:"#3F51B5", gesture:"drone",     detune:0 },
+      "relation":      { color:"#5C6BC0", gesture:"mixed",     detune:4 },
+      "body":          { color:"#311B92", gesture:"minorSoft", detune:3 },
+      "intimacy":      { color:"#283593", gesture:"minorSoft", detune:5 },
+      "language":      { color:"#1565C0", gesture:"triadMaj",  detune:0 },
+      "affect":        { color:"#2E7D32", gesture:"triadMaj",  detune:0 },
+      "image":         { color:"#2F3A4F", gesture:"mixed",     detune:6 },
+      "narrative":     { color:"#01579B", gesture:"mixed",     detune:6 },
+      "architecture":  { color:"#1B5E20", gesture:"triadMaj",  detune:0 },
+      "archive":       { color:"#1F4D3A", gesture:"triadMaj",  detune:0 },
+      "memory":        { color:"#B7B2A9", gesture:"slow",      detune:0 },
+      "time":          { color:"#0D47A1", gesture:"gliss",     detune:0 },
+      "network":       { color:"#2F5BFF", gesture:"cluster",   detune:10 },
+      "consciousness": { color:"#3949AB", gesture:"cluster",   detune:12 },
+      "landscape":     { color:"#1F6F78", gesture:"gliss",     detune:0 },
+      "system":        { color:"#2E7D32", gesture:"triadMaj",  detune:0 }
+    };
+
+    // Audio
+    let audioCtx=null;
+    function ctx(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); return audioCtx; }
+    function envPlay(freq, {type='sine', gain=0.05, dur=0.6, start=0, bend=false, detune=0}){
+      const c=ctx(); const o=c.createOscillator(); const g=c.createGain();
+      o.type=type; o.frequency.setValueAtTime(freq, c.currentTime+start);
+      if(bend){ o.frequency.linearRampToValueAtTime(freq*1.06, c.currentTime+start+0.06); }
+      if(detune){ o.detune.setValueAtTime(detune, c.currentTime+start); }
+      g.gain.setValueAtTime(0.0001, c.currentTime+start);
+      g.gain.linearRampToValueAtTime(gain, c.currentTime+start+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+start+dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(c.currentTime+start); o.stop(c.currentTime+start+dur+0.02);
+    }
+    const scales = {
+      major: [1,1.25,1.5], major6:[1,1.25,1.5,1.667], minor:[1,1.2,1.5], pentMaj:[1,1.25,1.5,1.667],
+      quartal:[1,4/3,16/9], add9:[1,1.25,1.5,9/8], tritone:[1,Math.sqrt(2)], outside:[1,1.25,Math.sqrt(2)]
+    };
+    function playAdj(adj){
+      const p=adjectiveProfile[adj] || {wave:'sine',mode:'major',pattern:'arp',bend:false};
+      const base=520, notes=scales[p.mode]||scales.major;
+      const g=(p.pattern==='pad'||p.pattern==='sustain')?0.045:0.055;
+      if(p.pattern==='stab'){ envPlay(base,{type:p.wave,gain:g,dur:0.32,bend:p.bend}); if(notes[1]) envPlay(base*notes[1],{type:p.wave,gain:g*0.8,dur:0.28,start:0.05}); }
+      else if(p.pattern==='jitter'){ envPlay(base,{type:p.wave,gain:g,dur:0.22,bend:true}); envPlay(base*1.03,{type:p.wave,gain:g*0.7,dur:0.22,start:0.1,bend:true}); }
+      else if(p.pattern==='duet'){ envPlay(base,{type:p.wave,gain:0.05,dur:0.4}); envPlay(base*(notes[3]||1.667),{type:p.wave,gain:0.04,dur:0.4,start:0.1}); }
+      else if(p.pattern==='pad'||p.pattern==='sustain'){ notes.slice(0,3).forEach((r,i)=> envPlay(base*r,{type:p.wave,gain:0.045,dur:0.85,start:i*0.02})); }
+      else if(p.pattern==='regular'){ notes.forEach((r,i)=> envPlay(base*r,{type:p.wave,gain:0.05,dur:0.36,start:i*0.12})); }
+      else if(p.pattern==='slow'||p.pattern==='swell'){ notes.forEach((r,i)=> envPlay(base*r,{type:p.wave,gain:0.05,dur:0.75,start:i*0.15,bend:p.bend})); }
+      else { notes.forEach((r,i)=> envPlay(base*r,{type:p.wave,gain:0.055,dur:0.32,start:i*0.08})); }
+    }
+    function playNoun(noun){
+      const n=nounProfile[noun] || {gesture:'drone',detune:0}; const base=210; const g=n.gesture;
+      if(g==='drone'){ envPlay(base,{type:'sine',gain:0.045,dur:0.66}); envPlay(base*1.5,{type:'sine',gain:0.035,dur:0.6,start:0.05}); }
+      else if(g==='minorSoft'){ envPlay(base,{type:'triangle',gain:0.045,dur:0.6}); envPlay(base*1.2,{type:'triangle',gain:0.04,dur:0.5,start:0.08,detune:n.detune||0}); }
+      else if(g==='gliss'){ envPlay(base*1.5,{type:'sawtooth',gain:0.045,dur:0.16}); envPlay(base*1.35,{type:'sawtooth',gain:0.04,dur:0.16,start:0.16}); envPlay(base*1.2,{type:'sawtooth',gain:0.04,dur:0.16,start:0.32}); }
+      else if(g==='mixed'){ envPlay(base,{type:'square',gain:0.045,dur:0.26,detune:n.detune||0}); envPlay(base*Math.sqrt(2),{type:'square',gain:0.04,dur:0.26,start:0.1}); }
+      else if(g==='triadMaj'){ [1,1.25,1.5].forEach((r,i)=> envPlay(base*r,{type:'sine',gain:0.045,dur:0.42,start:i*0.06})); }
+      else if(g==='cluster'){ [1,1.06,Math.sqrt(2)].forEach((r,i)=> envPlay(base*r,{type:'square',gain:0.045,dur:0.3,start:i*0.04,detune:n.detune||0})); }
+      else { envPlay(base,{type:'sine',gain:0.045,dur:0.6}); }
+    }
+
+    // Generation
+    function pickRandomKey(obj){ const k=Object.keys(obj); return k[(Math.random()*k.length)|0]; }
+    function setWords(adj, noun){
+      const w1=document.getElementById('word1'), w2=document.getElementById('word2');
+      w1.classList.remove('show'); w2.classList.remove('show');
+      requestAnimationFrame(()=>{
+        w1.textContent = adj; w2.textContent = noun;
+        requestAnimationFrame(()=>{ w1.classList.add('show'); w2.classList.add('show'); });
+      });
+    }
+    function renderPair(playAudio){
+      const adj = pickRandomKey(adjectiveProfile);
+      const noun = pickRandomKey(nounProfile);
+      setWords(adj, noun);
+      const bg = mixHex(adjectiveProfile[adj].color, nounProfile[noun].color);
+      setSolid(bg); setContrast(bg);
+      if (playAudio && document.getElementById('sound-toggle').checked){
+        playAdj(adj); setTimeout(()=> playNoun(noun), 80);
+      }
+    }
+    setSolid('#111'); setContrast('#111');
+    document.getElementById('gen-btn').addEventListener('click', function(){
+      try { const aCtx = new (window.AudioContext||window.webkitAudioContext)(); if (aCtx.state === 'suspended') aCtx.resume(); } catch(e){}
+      renderPair(true);
+    });
+  </script>
+</body>
+</html>
